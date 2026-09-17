@@ -1,0 +1,10 @@
+## .NET build output
+bin/
+obj/
+
+## Published self-contained binary output
+artifacts/
+
+## User-specific / IDE
+.vs/
+*.user
