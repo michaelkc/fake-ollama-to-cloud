@@ -15,7 +15,10 @@ public sealed class CloudApiClient
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IOptionsMonitor<CloudApiOptions> _options;
 
-    public CloudApiClient(IHttpClientFactory httpClientFactory, IOptionsMonitor<CloudApiOptions> options)
+    public CloudApiClient(
+        IHttpClientFactory httpClientFactory,
+        IOptionsMonitor<CloudApiOptions> options
+    )
     {
         _httpClientFactory = httpClientFactory;
         _options = options;
@@ -28,21 +31,35 @@ public sealed class CloudApiClient
         client.BaseAddress = new Uri(opts.BaseUrl.TrimEnd('/') + "/");
         if (!string.IsNullOrEmpty(opts.ApiKey))
         {
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", opts.ApiKey);
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+                "Bearer",
+                opts.ApiKey
+            );
         }
         return client;
     }
 
     /// <summary>POSTs a non-streaming chat completion request and returns the parsed JSON response.</summary>
-    public async Task<JsonObject> ChatCompletionAsync(JsonObject requestBody, CancellationToken cancellationToken)
+    public async Task<JsonObject> ChatCompletionAsync(
+        JsonObject requestBody,
+        CancellationToken cancellationToken
+    )
     {
         using var client = CreateClient();
         using var request = new HttpRequestMessage(HttpMethod.Post, "chat/completions")
         {
-            Content = new StringContent(requestBody.ToJsonString(), Encoding.UTF8, "application/json"),
+            Content = new StringContent(
+                requestBody.ToJsonString(),
+                Encoding.UTF8,
+                "application/json"
+            ),
         };
 
-        using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        using var response = await client.SendAsync(
+            request,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken
+        );
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
 
         if (!response.IsSuccessStatusCode)
@@ -50,7 +67,8 @@ public sealed class CloudApiClient
             throw new CloudApiException((int)response.StatusCode, body);
         }
 
-        return JsonNode.Parse(body) as JsonObject ?? throw new CloudApiException(502, "Upstream returned an unparsable response body.");
+        return JsonNode.Parse(body) as JsonObject
+            ?? throw new CloudApiException(502, "Upstream returned an unparsable response body.");
     }
 
     /// <summary>
@@ -59,15 +77,24 @@ public sealed class CloudApiClient
     /// </summary>
     public async IAsyncEnumerable<JsonObject> ChatCompletionStreamAsync(
         JsonObject requestBody,
-        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken
+    )
     {
         using var client = CreateClient();
         using var request = new HttpRequestMessage(HttpMethod.Post, "chat/completions")
         {
-            Content = new StringContent(requestBody.ToJsonString(), Encoding.UTF8, "application/json"),
+            Content = new StringContent(
+                requestBody.ToJsonString(),
+                Encoding.UTF8,
+                "application/json"
+            ),
         };
 
-        using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        using var response = await client.SendAsync(
+            request,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken
+        );
         if (!response.IsSuccessStatusCode)
         {
             var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -80,13 +107,18 @@ public sealed class CloudApiClient
         while (true)
         {
             var line = await reader.ReadLineAsync(cancellationToken);
-            if (line is null) yield break;
-            if (line.Length == 0) continue;
-            if (!line.StartsWith("data:", StringComparison.Ordinal)) continue;
+            if (line is null)
+                yield break;
+            if (line.Length == 0)
+                continue;
+            if (!line.StartsWith("data:", StringComparison.Ordinal))
+                continue;
 
             var payload = line["data:".Length..].Trim();
-            if (payload is "[DONE]") yield break;
-            if (payload.Length == 0) continue;
+            if (payload is "[DONE]")
+                yield break;
+            if (payload.Length == 0)
+                continue;
 
             JsonObject? chunk;
             try
@@ -98,7 +130,8 @@ public sealed class CloudApiClient
                 continue; // Skip malformed/partial lines rather than failing the whole stream.
             }
 
-            if (chunk is not null) yield return chunk;
+            if (chunk is not null)
+                yield return chunk;
         }
     }
 
@@ -119,14 +152,16 @@ public sealed class CloudApiClient
             foreach (var item in data)
             {
                 var id = (item as JsonObject)?["id"]?.GetValue<string>();
-                if (!string.IsNullOrEmpty(id)) ids.Add(id);
+                if (!string.IsNullOrEmpty(id))
+                    ids.Add(id);
             }
         }
         return ids;
     }
 }
 
-public sealed class CloudApiException(int statusCode, string body) : Exception($"Cloud API returned HTTP {statusCode}: {body}")
+public sealed class CloudApiException(int statusCode, string body)
+    : Exception($"Cloud API returned HTTP {statusCode}: {body}")
 {
     public int StatusCode { get; } = statusCode;
     public string Body { get; } = body;
